@@ -95,7 +95,17 @@
 
 | 模块 | 做什么 | 接口 | 依赖 |
 |------|--------|------|------|
-| `markdown.ts` | md → html + 标题树 | `parse(md): {html, headings}` | markdown-it |
+| `markdown.ts` | md → html + 标题树 | `parse(md): {html, headings: Heading[]}` | markdown-it |
+
+`Heading` 结构(供 Sidebar 渲染和进度定位):
+
+```ts
+interface Heading {
+  id: string;       // 标题文本的 slug,如 "数据流" → "数据流",作为锚点和进度键
+  level: number;    // 1-4,对应 H1-H4
+  text: string;     // 标题原文
+}
+```
 | `tauri-bridge.ts` | 屏蔽 IPC 细节 | `readFile(p)`, `saveProgress(p,h)`, `loadProgress(p)` | @tauri-apps/api |
 | `search.ts` | 关键词高亮+导航 | `search(text): matches[]`, `next()/prev()` | DOM |
 | `Sidebar` | 显示大纲、点击跳转 | props: `headings`, `onJump(id)` | — |
@@ -115,6 +125,15 @@
 3. **App 调用 `markdown.parse(text)`** → markdown-it 解析 → 返回 `{ html, headings[] }`
 4. **App 并行触发两件事**:Sidebar 接收 `headings[]` 渲染大纲;Reader 接收 `html` 渲染正文
 5. **恢复进度**(与 3、4 并行):`useProgress.loadProgress(path)` → `main.rs` 读 `app_data_dir/progress.json` → 返回上次读到的 heading id → Reader 滚动到该标题
+
+`progress.json` 结构(以文件绝对路径为键,存上次读到的标题 id):
+
+```json
+{
+  "/Users/apple/spec.md": { "headingId": "数据流", "updatedAt": 1782365058 },
+  "/Users/apple/other.md": { "headingId": "概述", "updatedAt": 1782365100 }
+}
+```
 6. **用户阅读、滚动**:停顿 1.5s 后,`useProgress` 记录当前可见标题 → `saveProgress(path, headingId)` → `main.rs` 写 JSON
 7. **用户按 Ctrl+F 搜索**:SearchBar 弹出 → `search.ts` 在 Reader DOM 里找匹配 → 高亮 + 上下跳转,不经过 Rust
 
