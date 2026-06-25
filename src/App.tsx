@@ -14,6 +14,8 @@ import {
 import { Sidebar } from "./components/Sidebar";
 import { Reader } from "./components/Reader";
 import { SearchBar } from "./components/SearchBar";
+import { Breadcrumb } from "./components/Breadcrumb";
+import { buildPath } from "./lib/outline";
 import { useProgress } from "./hooks/useProgress";
 import "./styles.css";
 
@@ -72,10 +74,14 @@ function App() {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [currentMatch, setCurrentMatch] = useState(0);
   const readerRef = useRef<HTMLElement>(null);
+  // 即时高亮(给面包屑和大纲),独立于 useProgress 的防抖版本
+  const [liveActiveId, setLiveActiveId] = useState<string | null>(null);
 
-  const { restoreId, activeId, recordHeading } = useProgress(
-    doc?.path ?? null,
-  );
+  const { restoreId, recordHeading } = useProgress(doc?.path ?? null);
+
+  // 面包屑路径:根据 liveActiveId 反查标题树
+  const breadcrumbPath =
+    doc && liveActiveId ? buildPath(doc.headings, liveActiveId) : [];
 
   const openFile = useCallback(async (path: string) => {
     try {
@@ -152,7 +158,8 @@ function App() {
         }
       }
       if (visible && visible.textContent) {
-        recordHeading(visible.textContent);
+        setLiveActiveId(visible.textContent); // 即时,给面包屑和大纲
+        recordHeading(visible.textContent); // 防抖,给进度存储
       }
     };
     reader.addEventListener("scroll", handler);
@@ -203,10 +210,13 @@ function App() {
       <div className="main">
         <Sidebar
           headings={doc?.headings ?? []}
-          activeId={activeId}
+          activeId={liveActiveId}
           onJump={handleJump}
         />
-        <Reader ref={readerRef} html={doc?.html ?? ""} error={error} />
+        <div className="reader-wrap">
+          <Breadcrumb path={breadcrumbPath} />
+          <Reader ref={readerRef} html={doc?.html ?? ""} error={error} />
+        </div>
       </div>
     </div>
   );
