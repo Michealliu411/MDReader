@@ -1,5 +1,7 @@
 // MD Reader - Tauri 后端入口
+mod bookmarks;
 mod progress;
+mod recent;
 
 use std::fs;
 use std::path::Path;
@@ -42,6 +44,68 @@ fn load_progress(
     Ok(progress::get(&map, &path))
 }
 
+/// 加载最近打开列表。
+#[tauri::command]
+fn load_recent(app: AppHandle) -> Result<Vec<recent::RecentEntry>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(recent::load(&data_dir))
+}
+
+/// 添加到最近打开(去重/移到最前/截断)。
+#[tauri::command]
+fn add_recent(
+    app: AppHandle,
+    path: String,
+    name: String,
+) -> Result<Vec<recent::RecentEntry>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let timestamp = chrono::Utc::now().timestamp();
+    recent::add(&data_dir, path, name, timestamp)
+}
+
+/// 加载所有书签。
+#[tauri::command]
+fn load_bookmarks(app: AppHandle) -> Result<Vec<bookmarks::Bookmark>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(bookmarks::load(&data_dir))
+}
+
+/// 添加书签(去重)。
+#[tauri::command]
+fn add_bookmark(
+    app: AppHandle,
+    file_path: String,
+    heading_id: String,
+    heading_text: String,
+) -> Result<Vec<bookmarks::Bookmark>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    bookmarks::add(
+        &data_dir,
+        bookmarks::Bookmark {
+            file_path,
+            heading_id,
+            heading_text,
+        },
+    )
+}
+
+/// 删除书签。
+#[tauri::command]
+fn remove_bookmark(
+    app: AppHandle,
+    file_path: String,
+    heading_id: String,
+) -> Result<Vec<bookmarks::Bookmark>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    bookmarks::remove(&data_dir, &file_path, &heading_id)
+}
+
+/// 写文本文件(导出用)。
+#[tauri::command]
+fn write_text_file(path: String, content: String) -> Result<(), String> {
+    fs::write(&path, content).map_err(|e| format!("写入失败: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -50,7 +114,13 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_file,
             save_progress,
-            load_progress
+            load_progress,
+            load_recent,
+            add_recent,
+            load_bookmarks,
+            add_bookmark,
+            remove_bookmark,
+            write_text_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
