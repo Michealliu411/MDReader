@@ -20,7 +20,8 @@ pub fn load(dir: &Path) -> Vec<Bookmark> {
     }
 }
 
-/// 返回某文件的所有书签
+/// 返回某文件的所有书签(前端目前自己 filter,此函数供测试和未来命令使用)
+#[allow(dead_code)]
 pub fn list_for_file(dir: &Path, file_path: &str) -> Vec<Bookmark> {
     load(dir)
         .into_iter()
