@@ -4,6 +4,13 @@ import { listen } from "@tauri-apps/api/event";
 import { parse, type Heading } from "./lib/markdown";
 import { readFile } from "./lib/tauri-bridge";
 import { findMatches, nextIndex, prevIndex } from "./lib/search";
+import {
+  getInitialTheme,
+  applyTheme,
+  toggleTheme,
+  saveTheme,
+  type Theme,
+} from "./lib/theme";
 import { Sidebar } from "./components/Sidebar";
 import { Reader } from "./components/Reader";
 import { SearchBar } from "./components/SearchBar";
@@ -18,6 +25,46 @@ interface LoadedDoc {
 }
 
 function App() {
+  // 主题(跟随系统 + 手动切换,存 localStorage)
+  const [theme, setTheme] = useState<Theme>(() => {
+    const t = getInitialTheme();
+    applyTheme(t);
+    return t;
+  });
+  // 字号/行距(存 localStorage)
+  const [fontSize, setFontSize] = useState(() =>
+    parseInt(localStorage.getItem("md-reader-font-size") || "16", 10),
+  );
+  const [lineHeight, setLineHeight] = useState(() =>
+    parseFloat(localStorage.getItem("md-reader-line-height") || "1.7"),
+  );
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--font-size", `${fontSize}px`);
+    localStorage.setItem("md-reader-font-size", String(fontSize));
+  }, [fontSize]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--line-height",
+      String(lineHeight),
+    );
+    localStorage.setItem("md-reader-line-height", String(lineHeight));
+  }, [lineHeight]);
+
+  const handleToggleTheme = () => {
+    const next = toggleTheme(theme);
+    applyTheme(next);
+    saveTheme(next);
+    setTheme(next);
+  };
+  const handleFontInc = () => setFontSize((s) => Math.min(24, s + 1));
+  const handleFontDec = () => setFontSize((s) => Math.max(12, s - 1));
+  const handleLineInc = () =>
+    setLineHeight((l) => Math.min(2.2, +(l + 0.1).toFixed(1)));
+  const handleLineDec = () =>
+    setLineHeight((l) => Math.max(1.4, +(l - 0.1).toFixed(1)));
+
   const [doc, setDoc] = useState<LoadedDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -134,6 +181,15 @@ function App() {
     <div className="app">
       <div className="toolbar">
         <button onClick={handleOpen}>打开</button>
+        <span className="toolbar-sep" />
+        <button onClick={handleFontDec}>A-</button>
+        <button onClick={handleFontInc}>A+</button>
+        <button onClick={handleLineDec}>≡-</button>
+        <button onClick={handleLineInc}>≡+</button>
+        <span className="toolbar-sep" />
+        <button onClick={handleToggleTheme}>
+          {theme === "light" ? "🌙" : "☀️"}
+        </button>
       </div>
       <SearchBar
         visible={searchVisible}

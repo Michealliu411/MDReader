@@ -1,0 +1,57 @@
+/* 日间代码配色(github 风格)*/
+:root[data-theme="light"] .hljs {
+  color: #24292e;
+  background: var(--code-bg);
+}
+:root[data-theme="light"] .hljs-comment,
+:root[data-theme="light"] .hljs-quote {
+  color: #6a737d;
+}
+:root[data-theme="light"] .hljs-keyword,
+:root[data-theme="light"] .hljs-selector-tag {
+  color: #d73a49;
+}
+:root[data-theme="light"] .hljs-string,
+:root[data-theme="light"] .hljs-attr {
+  color: #032f62;
+}
+:root[data-theme="light"] .hljs-number {
+  color: #005cc5;
+}
+:root[data-theme="light"] .hljs-title,
+:root[data-theme="light"] .hljs-section {
+  color: #6f42c1;
+}
+:root[data-theme="light"] .hljs-built_in,
+:root[data-theme="light"] .hljs-type {
+  color: #005cc5;
+}
+
+/* 夜间代码配色(github-dark 风格)*/
+:root[data-theme="dark"] .hljs {
+  color: #c9d1d9;
+  background: var(--code-bg);
+}
+:root[data-theme="dark"] .hljs-comment,
+:root[data-theme="dark"] .hljs-quote {
+  color: #8b949e;
+}
+:root[data-theme="dark"] .hljs-keyword,
+:root[data-theme="dark"] .hljs-selector-tag {
+  color: #ff7b72;
+}
+:root[data-theme="dark"] .hljs-string,
+:root[data-theme="dark"] .hljs-attr {
+  color: #a5d6ff;
+}
+:root[data-theme="dark"] .hljs-number {
+  color: #79c0ff;
+}
+:root[data-theme="dark"] .hljs-title,
+:root[data-theme="dark"] .hljs-section {
+  color: #d2a8ff;
+}
+:root[data-theme="dark"] .hljs-built_in,
+:root[data-theme="dark"] .hljs-type {
+  color: #79c0ff;
+}
