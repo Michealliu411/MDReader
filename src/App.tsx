@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { parse, type Heading } from "./lib/markdown";
-import { readFile } from "./lib/tauri-bridge";
+import {
+  readFile,
+  loadRecent,
+  addRecent,
+  loadBookmarks,
+  addBookmark,
+  removeBookmark,
+  writeTextFile,
+  type RecentEntry,
+  type Bookmark,
+} from "./lib/tauri-bridge";
 import { findMatches, nextIndex, prevIndex } from "./lib/search";
 import {
   getInitialTheme,
@@ -11,11 +21,13 @@ import {
   saveTheme,
   type Theme,
 } from "./lib/theme";
+import { buildPath } from "./lib/outline";
+import { buildExportHtml } from "./lib/export";
 import { Sidebar } from "./components/Sidebar";
 import { Reader } from "./components/Reader";
 import { SearchBar } from "./components/SearchBar";
 import { Breadcrumb } from "./components/Breadcrumb";
-import { buildPath } from "./lib/outline";
+import { RecentList } from "./components/RecentList";
 import { useProgress } from "./hooks/useProgress";
 import "./styles.css";
 
@@ -77,11 +89,26 @@ function App() {
   // 即时高亮(给面包屑和大纲),独立于 useProgress 的防抖版本
   const [liveActiveId, setLiveActiveId] = useState<string | null>(null);
 
+  // 最近列表 + 书签
+  const [recent, setRecent] = useState<RecentEntry[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+
   const { restoreId, recordHeading } = useProgress(doc?.path ?? null);
 
-  // 面包屑路径:根据 liveActiveId 反查标题树
+  // 面包屑路径
   const breadcrumbPath =
     doc && liveActiveId ? buildPath(doc.headings, liveActiveId) : [];
+
+  // 当前文件的书签 id 集合
+  const bookmarkedIds = new Set(
+    bookmarks.filter((b) => b.filePath === doc?.path).map((b) => b.headingId),
+  );
+
+  // 启动时加载最近列表和书签
+  useEffect(() => {
+    loadRecent().then(setRecent).catch(() => {});
+    loadBookmarks().then(setBookmarks).catch(() => {});
+  }, []);
 
   const openFile = useCallback(async (path: string) => {
     try {
@@ -89,6 +116,8 @@ function App() {
       const { html, headings } = parse(text);
       setError(null);
       setDoc({ path, html, headings, text });
+      const name = path.split("/").pop() || path;
+      addRecent(path, name).then(setRecent).catch(() => {});
     } catch (e) {
       setError(String(e));
       setDoc(null);
@@ -127,7 +156,6 @@ function App() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // 搜索匹配(基于原始 md 文本)
   const matches = doc ? findMatches(doc.text, keyword, caseSensitive) : [];
 
   const handleSearch = useCallback((kw: string, cs: boolean) => {
@@ -144,7 +172,7 @@ function App() {
     setCurrentMatch((c) => prevIndex(matches, c));
   }, [matches]);
 
-  // 滚动监听:记录当前可见标题(防抖由 useProgress 内部处理)
+  // 滚动监听:即时高亮 + 防抖存进度
   useEffect(() => {
     if (!doc || !readerRef.current) return;
     const reader = readerRef.current;
@@ -166,7 +194,7 @@ function App() {
     return () => reader.removeEventListener("scroll", handler);
   }, [doc, recordHeading]);
 
-  // 恢复进度:滚动到上次标题
+  // 恢复进度
   useEffect(() => {
     if (restoreId && readerRef.current && doc) {
       const target = Array.from(
@@ -184,10 +212,47 @@ function App() {
     target?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  // 书签切换
+  const handleToggleBookmark = useCallback(
+    (heading: Heading) => {
+      if (!doc) return;
+      if (bookmarkedIds.has(heading.id)) {
+        removeBookmark(doc.path, heading.id)
+          .then(setBookmarks)
+          .catch(() => {});
+      } else {
+        addBookmark(doc.path, heading.id, heading.text)
+          .then(setBookmarks)
+          .catch(() => {});
+      }
+    },
+    [doc, bookmarkedIds],
+  );
+
+  // 导出 HTML
+  const handleExport = useCallback(async () => {
+    if (!doc) return;
+    const savePath = await save({
+      defaultPath: (doc.path.split("/").pop() || "export").replace(/\.md$/, "") + ".html",
+      filters: [{ name: "HTML", extensions: ["html"] }],
+    });
+    if (!savePath) return;
+    const html = buildExportHtml(
+      doc.html,
+      doc.path.split("/").pop() || "export",
+    );
+    try {
+      await writeTextFile(savePath, html);
+    } catch (e) {
+      setError("导出失败: " + String(e));
+    }
+  }, [doc]);
+
   return (
     <div className="app">
       <div className="toolbar">
         <button onClick={handleOpen}>打开</button>
+        {doc && <button onClick={handleExport}>导出</button>}
         <span className="toolbar-sep" />
         <button onClick={handleFontDec}>A-</button>
         <button onClick={handleFontInc}>A+</button>
@@ -212,10 +277,20 @@ function App() {
           headings={doc?.headings ?? []}
           activeId={liveActiveId}
           onJump={handleJump}
+          bookmarks={bookmarks}
+          currentFilePath={doc?.path ?? null}
+          bookmarkedIds={bookmarkedIds}
+          onToggleBookmark={handleToggleBookmark}
         />
         <div className="reader-wrap">
           <Breadcrumb path={breadcrumbPath} />
-          <Reader ref={readerRef} html={doc?.html ?? ""} error={error} />
+          {doc ? (
+            <Reader ref={readerRef} html={doc.html} error={error} />
+          ) : (
+            <main className="reader">
+              <RecentList entries={recent} onOpen={openFile} />
+            </main>
+          )}
         </div>
       </div>
     </div>

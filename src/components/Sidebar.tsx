@@ -1,35 +1,56 @@
 import type { Heading } from "../lib/markdown";
+import type { Bookmark } from "../lib/tauri-bridge";
+import { Bookmarks } from "./Bookmarks";
 
 interface SidebarProps {
   headings: Heading[];
   activeId: string | null;
   onJump: (id: string) => void;
+  bookmarks: Bookmark[];
+  currentFilePath: string | null;
+  bookmarkedIds: Set<string>;
+  onToggleBookmark: (heading: Heading) => void;
 }
 
-export function Sidebar({ headings, activeId, onJump }: SidebarProps) {
-  if (headings.length === 0) {
-    return (
-      <aside className="sidebar">
-        <p className="sidebar-empty">无大纲</p>
-      </aside>
-    );
-  }
-
+export function Sidebar({
+  headings,
+  activeId,
+  onJump,
+  bookmarks,
+  currentFilePath,
+  bookmarkedIds,
+  onToggleBookmark,
+}: SidebarProps) {
   return (
     <aside className="sidebar">
-      <nav className="outline">
-        {headings.map((h) => (
-          <a
-            key={h.id}
-            className={`outline-item level-${h.level}${
-              h.id === activeId ? " active" : ""
-            }`}
-            onClick={() => onJump(h.id)}
-          >
-            {h.text}
-          </a>
-        ))}
-      </nav>
+      <Bookmarks
+        bookmarks={bookmarks}
+        currentFilePath={currentFilePath}
+        onJump={onJump}
+      />
+      {headings.length === 0 ? (
+        <p className="sidebar-empty">无大纲</p>
+      ) : (
+        <nav className="outline">
+          {headings.map((h) => (
+            <div key={h.id} className={`outline-row level-${h.level}`}>
+              <a
+                className={`outline-item${h.id === activeId ? " active" : ""}`}
+                onClick={() => onJump(h.id)}
+              >
+                {h.text}
+              </a>
+              <button
+                className={`bookmark-toggle${bookmarkedIds.has(h.id) ? " active" : ""}`}
+                onClick={() => onToggleBookmark(h)}
+                title="书签"
+              >
+                {bookmarkedIds.has(h.id) ? "📑" : "🔖"}
+              </button>
+            </div>
+          ))}
+        </nav>
+      )}
     </aside>
   );
 }
