@@ -2,9 +2,11 @@
 mod bookmarks;
 mod progress;
 mod recent;
+mod watcher;
 
 use std::fs;
 use std::path::Path;
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
 /// 读取本地文件内容。失败返回中文错误信息,前端展示给用户。
@@ -111,6 +113,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(Mutex::new(watcher::WatcherState { watcher: None }))
         .invoke_handler(tauri::generate_handler![
             read_file,
             save_progress,
@@ -121,6 +124,8 @@ pub fn run() {
             add_bookmark,
             remove_bookmark,
             write_text_file,
+            watcher::start_watching,
+            watcher::stop_watching,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
