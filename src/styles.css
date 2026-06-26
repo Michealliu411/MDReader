@@ -111,6 +111,50 @@
   padding-left: 44px;
 }
 
+.file-tree {
+  font-size: 13px;
+}
+.tree-node {
+  display: flex;
+  flex-direction: column;
+}
+.tree-dir,
+.tree-file {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 8px;
+  color: var(--fg);
+  text-align: left;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.tree-dir:hover,
+.tree-file:hover {
+  background: var(--hover-bg);
+}
+.tree-file.active {
+  background: var(--active-bg);
+  color: var(--link);
+}
+.tree-toggle {
+  width: 12px;
+  opacity: 0.6;
+}
+.tree-icon {
+  font-size: 14px;
+}
+.tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .outline-row {
   display: flex;
   align-items: center;

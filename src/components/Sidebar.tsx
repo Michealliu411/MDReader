@@ -1,55 +1,35 @@
-import type { Heading } from "../lib/markdown";
-import type { Bookmark } from "../lib/tauri-bridge";
+import type { TreeNode, Bookmark } from "../lib/tauri-bridge";
 import { Bookmarks } from "./Bookmarks";
+import { FileTree } from "./FileTree";
 
 interface SidebarProps {
-  headings: Heading[];
-  activeId: string | null;
-  onJump: (id: string) => void;
+  tree: TreeNode | null;
+  currentPath: string | null;
+  onOpenFile: (path: string) => void;
   bookmarks: Bookmark[];
   currentFilePath: string | null;
-  bookmarkedIds: Set<string>;
-  onToggleBookmark: (heading: Heading) => void;
+  onJumpBookmark: (headingId: string) => void;
 }
 
 export function Sidebar({
-  headings,
-  activeId,
-  onJump,
+  tree,
+  currentPath,
+  onOpenFile,
   bookmarks,
   currentFilePath,
-  bookmarkedIds,
-  onToggleBookmark,
+  onJumpBookmark,
 }: SidebarProps) {
   return (
     <aside className="sidebar">
       <Bookmarks
         bookmarks={bookmarks}
         currentFilePath={currentFilePath}
-        onJump={onJump}
+        onJump={onJumpBookmark}
       />
-      {headings.length === 0 ? (
-        <p className="sidebar-empty">无大纲</p>
+      {tree ? (
+        <FileTree node={tree} currentPath={currentPath} onOpen={onOpenFile} />
       ) : (
-        <nav className="outline">
-          {headings.map((h) => (
-            <div key={h.id} className={`outline-row level-${h.level}`}>
-              <a
-                className={`outline-item${h.id === activeId ? " active" : ""}`}
-                onClick={() => onJump(h.id)}
-              >
-                {h.text}
-              </a>
-              <button
-                className={`bookmark-toggle${bookmarkedIds.has(h.id) ? " active" : ""}`}
-                onClick={() => onToggleBookmark(h)}
-                title="书签"
-              >
-                {bookmarkedIds.has(h.id) ? "📑" : "🔖"}
-              </button>
-            </div>
-          ))}
-        </nav>
+        <p className="sidebar-empty">点击 📂 打开文件夹</p>
       )}
     </aside>
   );

@@ -82,3 +82,23 @@ export async function startWatching(path: string): Promise<void> {
 export async function stopWatching(): Promise<void> {
   await invoke("stop_watching");
 }
+
+// --- 文件树 ---
+export interface TreeNode {
+  name: string;
+  path: string;
+  isDir: boolean;
+  children: TreeNode[];
+}
+
+export async function listDir(path: string): Promise<TreeNode> {
+  return invoke<TreeNode>("list_dir", { path });
+}
+
+export async function loadWorkspace(): Promise<string | null> {
+  return invoke<string | null>("load_workspace");
+}
+
+export async function saveWorkspace(path: string): Promise<void> {
+  await invoke("save_workspace", { path });
+}

@@ -1,5 +1,6 @@
 // MD Reader - Tauri 后端入口
 mod bookmarks;
+mod filetree;
 mod progress;
 mod recent;
 mod watcher;
@@ -108,6 +109,26 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| format!("写入失败: {}", e))
 }
 
+/// 遍历目录构建文件树(只含 .md + 子目录)。
+#[tauri::command]
+fn list_dir(path: String) -> Result<filetree::TreeNode, String> {
+    Ok(filetree::build_tree(std::path::Path::new(&path), 0))
+}
+
+/// 加载上次打开的文件夹路径。
+#[tauri::command]
+fn load_workspace(app: AppHandle) -> Result<Option<String>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(filetree::load_workspace(&data_dir))
+}
+
+/// 保存当前打开的文件夹路径。
+#[tauri::command]
+fn save_workspace(app: AppHandle, path: String) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    filetree::save_workspace(&data_dir, &path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -124,6 +145,9 @@ pub fn run() {
             add_bookmark,
             remove_bookmark,
             write_text_file,
+            list_dir,
+            load_workspace,
+            save_workspace,
             watcher::start_watching,
             watcher::stop_watching,
         ])
