@@ -55,7 +55,7 @@ function App() {
   const [fontSize, setFontSize] = useState(() =>
     parseInt(localStorage.getItem("md-reader-font-size") || "16", 10),
   );
-  const [lineHeight, setLineHeight] = useState(() =>
+  const [lineHeight] = useState(() =>
     parseFloat(localStorage.getItem("md-reader-line-height") || "1.7"),
   );
 
@@ -80,10 +80,6 @@ function App() {
   };
   const handleFontInc = () => setFontSize((s) => Math.min(24, s + 1));
   const handleFontDec = () => setFontSize((s) => Math.max(12, s - 1));
-  const handleLineInc = () =>
-    setLineHeight((l) => Math.min(2.2, +(l + 0.1).toFixed(1)));
-  const handleLineDec = () =>
-    setLineHeight((l) => Math.max(1.4, +(l - 0.1).toFixed(1)));
 
   const [doc, setDoc] = useState<LoadedDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -312,17 +308,18 @@ function App() {
   return (
     <div className="app">
       <div className="toolbar">
-        <button onClick={handleOpen}>打开</button>
-        <button onClick={handleOpenFolder}>📁 文件夹</button>
-        <button onClick={() => setUrlDialogVisible(true)}>🌐 网络</button>
-        {doc && <button onClick={handleExport}>导出</button>}
+        <button className="icon-btn" onClick={handleOpen} title="打开文件">📄</button>
+        <button className="icon-btn" onClick={handleOpenFolder} title="打开文件夹">📂</button>
+        <button className="icon-btn" onClick={() => setUrlDialogVisible(true)} title="打开网络文档">🌐</button>
+        {doc && <button className="icon-btn" onClick={handleExport} title="导出 HTML">📤</button>}
         <span className="toolbar-sep" />
-        <button onClick={handleFontDec}>A-</button>
-        <button onClick={handleFontInc}>A+</button>
-        <button onClick={handleLineDec}>≡-</button>
-        <button onClick={handleLineInc}>≡+</button>
+        <div className="font-controls">
+          <button className="icon-btn" onClick={handleFontDec} title="缩小字号">A−</button>
+          <span className="font-size-display">{fontSize}</span>
+          <button className="icon-btn" onClick={handleFontInc} title="放大字号">A+</button>
+        </div>
         <span className="toolbar-sep" />
-        <button onClick={handleToggleTheme}>
+        <button className="icon-btn" onClick={handleToggleTheme} title="切换主题">
           {theme === "light" ? "🌙" : "☀️"}
         </button>
       </div>
