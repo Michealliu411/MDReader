@@ -7,12 +7,14 @@ import {
   loadRecent,
   addRecent,
   loadBookmarks,
-  addBookmark,
-  removeBookmark,
   writeTextFile,
   startWatching,
+  listDir,
+  loadWorkspace,
+  saveWorkspace,
   type RecentEntry,
   type Bookmark,
+  type TreeNode,
 } from "./lib/tauri-bridge";
 import { findMatches, nextIndex, prevIndex } from "./lib/search";
 import {
@@ -94,6 +96,8 @@ function App() {
   // 最近列表 + 书签
   const [recent, setRecent] = useState<RecentEntry[]>([]);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  // 文件树
+  const [tree, setTree] = useState<TreeNode | null>(null);
 
   const { restoreId, recordHeading } = useProgress(doc?.path ?? null);
 
@@ -101,15 +105,25 @@ function App() {
   const breadcrumbPath =
     doc && liveActiveId ? buildPath(doc.headings, liveActiveId) : [];
 
-  // 当前文件的书签 id 集合
-  const bookmarkedIds = new Set(
-    bookmarks.filter((b) => b.filePath === doc?.path).map((b) => b.headingId),
-  );
-
   // 启动时加载最近列表和书签
   useEffect(() => {
     loadRecent().then(setRecent).catch(() => {});
     loadBookmarks().then(setBookmarks).catch(() => {});
+    // 恢复上次打开的文件夹
+    loadWorkspace()
+      .then((path) => {
+        if (path) listDir(path).then(setTree).catch(() => {});
+      })
+      .catch(() => {});
+  }, []);
+
+  // 打开文件夹
+  const handleOpenFolder = useCallback(async () => {
+    const selected = await open({ directory: true });
+    if (typeof selected === "string") {
+      listDir(selected).then(setTree).catch(() => {});
+      saveWorkspace(selected).catch(() => {});
+    }
   }, []);
 
   const openFile = useCallback(async (path: string) => {
@@ -244,22 +258,6 @@ function App() {
   }, []);
 
   // 书签切换
-  const handleToggleBookmark = useCallback(
-    (heading: Heading) => {
-      if (!doc) return;
-      if (bookmarkedIds.has(heading.id)) {
-        removeBookmark(doc.path, heading.id)
-          .then(setBookmarks)
-          .catch(() => {});
-      } else {
-        addBookmark(doc.path, heading.id, heading.text)
-          .then(setBookmarks)
-          .catch(() => {});
-      }
-    },
-    [doc, bookmarkedIds],
-  );
-
   // 导出 HTML
   const handleExport = useCallback(async () => {
     if (!doc) return;
@@ -283,6 +281,7 @@ function App() {
     <div className="app">
       <div className="toolbar">
         <button onClick={handleOpen}>打开</button>
+        <button onClick={handleOpenFolder}>📁 文件夹</button>
         {doc && <button onClick={handleExport}>导出</button>}
         <span className="toolbar-sep" />
         <button onClick={handleFontDec}>A-</button>
@@ -305,13 +304,12 @@ function App() {
       />
       <div className="main">
         <Sidebar
-          headings={doc?.headings ?? []}
-          activeId={liveActiveId}
-          onJump={handleJump}
+          tree={tree}
+          currentPath={doc?.path ?? null}
+          onOpenFile={openFile}
           bookmarks={bookmarks}
           currentFilePath={doc?.path ?? null}
-          bookmarkedIds={bookmarkedIds}
-          onToggleBookmark={handleToggleBookmark}
+          onJumpBookmark={handleJump}
         />
         <div className="reader-wrap">
           <Breadcrumb path={breadcrumbPath} />
