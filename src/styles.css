@@ -383,3 +383,47 @@
   min-width: 50px;
   text-align: center;
 }
+
+.url-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.url-dialog {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 20px;
+  width: 480px;
+  max-width: 90vw;
+  border: 1px solid var(--border);
+}
+.url-dialog h3 {
+  margin-bottom: 12px;
+  color: var(--fg);
+}
+.url-dialog input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.url-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.url-dialog-actions button {
+  padding: 6px 16px;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}

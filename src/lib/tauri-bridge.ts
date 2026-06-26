@@ -102,3 +102,18 @@ export async function loadWorkspace(): Promise<string | null> {
 export async function saveWorkspace(path: string): Promise<void> {
   await invoke("save_workspace", { path });
 }
+
+// --- 网络 md ---
+export interface FetchResult {
+  content: string;
+  fromCache: boolean;
+  stale: boolean;
+}
+
+export async function fetchUrl(url: string): Promise<FetchResult> {
+  return invoke<FetchResult>("fetch_url", { url });
+}
+
+export async function fetchUrlFresh(url: string): Promise<string> {
+  return invoke<string>("fetch_url_fresh", { url });
+}

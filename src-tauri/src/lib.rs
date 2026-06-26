@@ -1,5 +1,6 @@
 // MD Reader - Tauri 后端入口
 mod bookmarks;
+mod fetcher;
 mod filetree;
 mod progress;
 mod recent;
@@ -129,6 +130,20 @@ fn save_workspace(app: AppHandle, path: String) -> Result<(), String> {
     filetree::save_workspace(&data_dir, &path)
 }
 
+/// 拉取网络 md(先缓存秒开,后台刷新由前端二次调用 fetch_url_fresh 触发)。
+#[tauri::command]
+fn fetch_url(app: AppHandle, url: String) -> Result<fetcher::FetchResult, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fetcher::fetch(&url, &data_dir)
+}
+
+/// 强制重新拉取(忽略缓存)。
+#[tauri::command]
+fn fetch_url_fresh(app: AppHandle, url: String) -> Result<String, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fetcher::fetch_fresh(&url, &data_dir)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -148,6 +163,8 @@ pub fn run() {
             list_dir,
             load_workspace,
             save_workspace,
+            fetch_url,
+            fetch_url_fresh,
             watcher::start_watching,
             watcher::stop_watching,
         ])
