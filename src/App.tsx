@@ -12,6 +12,8 @@ import {
   listDir,
   loadWorkspace,
   saveWorkspace,
+  fetchUrl,
+  fetchUrlFresh,
   type RecentEntry,
   type Bookmark,
   type TreeNode,
@@ -31,6 +33,7 @@ import { Reader } from "./components/Reader";
 import { SearchBar } from "./components/SearchBar";
 import { Breadcrumb } from "./components/Breadcrumb";
 import { RecentList } from "./components/RecentList";
+import { UrlDialog } from "./components/UrlDialog";
 import { useProgress } from "./hooks/useProgress";
 import "./styles.css";
 
@@ -98,6 +101,8 @@ function App() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   // 文件树
   const [tree, setTree] = useState<TreeNode | null>(null);
+  // 网络 URL 弹窗
+  const [urlDialogVisible, setUrlDialogVisible] = useState(false);
 
   const { restoreId, recordHeading } = useProgress(doc?.path ?? null);
 
@@ -258,6 +263,33 @@ function App() {
   }, []);
 
   // 书签切换
+  // 拉取网络 md(先缓存秒开,后台刷新)
+  const handleFetchUrl = useCallback(async (url: string) => {
+    try {
+      const result = await fetchUrl(url);
+      const { html, headings } = parse(result.content);
+      setError(null);
+      setDoc({ path: url, html, headings, text: result.content });
+      // 若缓存较旧,后台刷新
+      if (result.fromCache && result.stale) {
+        fetchUrlFresh(url)
+          .then((freshContent) => {
+            const { html, headings } = parse(freshContent);
+            setDoc((prev) => {
+              if (prev && prev.path === url) {
+                return { ...prev, html, headings, text: freshContent };
+              }
+              return prev;
+            });
+          })
+          .catch(() => {});
+      }
+    } catch (e) {
+      setError(String(e));
+      setDoc(null);
+    }
+  }, []);
+
   // 导出 HTML
   const handleExport = useCallback(async () => {
     if (!doc) return;
@@ -282,6 +314,7 @@ function App() {
       <div className="toolbar">
         <button onClick={handleOpen}>打开</button>
         <button onClick={handleOpenFolder}>📁 文件夹</button>
+        <button onClick={() => setUrlDialogVisible(true)}>🌐 网络</button>
         {doc && <button onClick={handleExport}>导出</button>}
         <span className="toolbar-sep" />
         <button onClick={handleFontDec}>A-</button>
@@ -322,6 +355,11 @@ function App() {
           )}
         </div>
       </div>
+      <UrlDialog
+        visible={urlDialogVisible}
+        onClose={() => setUrlDialogVisible(false)}
+        onSubmit={handleFetchUrl}
+      />
     </div>
   );
 }
