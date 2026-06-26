@@ -10,6 +10,7 @@ import {
   addBookmark,
   removeBookmark,
   writeTextFile,
+  startWatching,
   type RecentEntry,
   type Bookmark,
 } from "./lib/tauri-bridge";
@@ -86,6 +87,7 @@ function App() {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [currentMatch, setCurrentMatch] = useState(0);
   const readerRef = useRef<HTMLElement>(null);
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 即时高亮(给面包屑和大纲),独立于 useProgress 的防抖版本
   const [liveActiveId, setLiveActiveId] = useState<string | null>(null);
 
@@ -118,6 +120,10 @@ function App() {
       setDoc({ path, html, headings, text });
       const name = path.split("/").pop() || path;
       addRecent(path, name).then(setRecent).catch(() => {});
+      // 启动文件监听(网络 URL 不监听)
+      if (!path.startsWith("http")) {
+        startWatching(path).catch(() => {});
+      }
     } catch (e) {
       setError(String(e));
       setDoc(null);
@@ -142,6 +148,31 @@ function App() {
       unlisten.then((fn) => fn());
     };
   }, [openFile]);
+
+  // 文件变化监听:防抖 500ms 重读 + 保留滚动位置
+  useEffect(() => {
+    const unlisten = listen<string>("file-changed", () => {
+      if (!doc) return;
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      reloadTimer.current = setTimeout(async () => {
+        const savedScroll = readerRef.current?.scrollTop ?? 0;
+        try {
+          const text = await readFile(doc.path);
+          const { html, headings } = parse(text);
+          setDoc({ ...doc, html, headings, text });
+          // 恢复滚动位置(下一帧)
+          requestAnimationFrame(() => {
+            if (readerRef.current) readerRef.current.scrollTop = savedScroll;
+          });
+        } catch {
+          // 静默:文件可能正在被写入
+        }
+      }, 500);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [doc]);
 
   // Cmd/Ctrl+F 搜索,Esc 关闭
   useEffect(() => {

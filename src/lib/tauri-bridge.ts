@@ -73,3 +73,12 @@ export async function writeTextFile(
 ): Promise<void> {
   await invoke("write_text_file", { path, content });
 }
+
+// --- 文件监听 ---
+export async function startWatching(path: string): Promise<void> {
+  await invoke("start_watching", { path });
+}
+
+export async function stopWatching(): Promise<void> {
+  await invoke("stop_watching");
+}
